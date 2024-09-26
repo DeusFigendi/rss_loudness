@@ -13,7 +13,7 @@ import json
 # python3 rss_loudness.py feed_url [float_delimiter [output_format [first_episode_number]]]
 #
 # feed_url (obligatory):           The url of the feed to analyse
-# float_delimiter (optional):      In the output file float numbers could be represented with . or with , (default) as decimal delimiter or any other character string (like \t e.g.)
+# float_delimiter (optional):      In the output file float numbers could be represented with . or with , (default) as decimal delimiter or any other character string (like \t e.g.). This has no effect on json output since the representation of float numbers is well standardized.
 # output_format (optional):        Defaults to csv. Alternative is json
 # first_episode_number (optional): To set which episode number the first episode has (usually 0 or 1)
 
@@ -78,9 +78,9 @@ def get_loudnesses_from_file(f):
                  'LRA High': LRAHigh}    
 	return(statsDict)
 
-def eurofloat(f):
+def eurofloat(f,d):
 	# returns float with coma instead of point as decimal delimiter 
-	return_string = str(f).replace('.',',')
+	return_string = str(f).replace('.',d)
 	return(return_string)
 
 NewsFeed = feedparser.parse(feed_url)
@@ -96,7 +96,7 @@ for j in range(0,len(NewsFeed.entries)):
 	urllib.request.urlretrieve(this_mp3_url, str(j+first_episode_number)+".mp3")
 	this_loudness = get_loudnesses_from_file(str(j+first_episode_number)+".mp3")
 	os.remove(str(j+first_episode_number)+".mp3")
-	csv_content += str(j+first_episode_number)+';"'+this_title+'";'+eurofloat(this_loudness['I'])+';'+eurofloat(this_loudness['I Threshold'])+';'+eurofloat(this_loudness['LRA'])+';'+eurofloat(this_loudness['LRA Threshold'])+';'+eurofloat(this_loudness['LRA Low'])+';'+eurofloat(this_loudness['LRA High'])+"\n"
+	csv_content += str(j+first_episode_number)+';"'+this_title+'";'+eurofloat(this_loudness['I'],float_delimiter)+';'+eurofloat(this_loudness['I Threshold'],float_delimiter)+';'+eurofloat(this_loudness['LRA'],float_delimiter)+';'+eurofloat(this_loudness['LRA Threshold'],float_delimiter)+';'+eurofloat(this_loudness['LRA Low'],float_delimiter)+';'+eurofloat(this_loudness['LRA High'],float_delimiter)+"\n"
 	json_content.append({**this_loudness, **{'index':j+first_episode_number,"title":this_title}})
 	if output_format == "csv":
 		with open("loudness.csv", "w") as csv_file:
