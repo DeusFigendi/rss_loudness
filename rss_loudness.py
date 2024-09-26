@@ -5,6 +5,7 @@ import urllib.request
 import subprocess
 import os
 import sys
+import json
 
 # This progam analyses the mp3 files of an rss feed (vulgo: podcast) and saves them into a file
 #
@@ -27,17 +28,18 @@ if len(sys.argv) >= 5:
 	float_delimiter = sys.argv[2]
 	output_format = sys.argv[3]
 	first_episode_number = int(sys.argv[4])
-if len(sys.argv) == 4:	
+elif len(sys.argv) == 4:	
 	feed_url = sys.argv[1]
 	float_delimiter = sys.argv[2]
 	output_format = sys.argv[3]
-if len(sys.argv) == 3:	
+elif len(sys.argv) == 3:	
 	feed_url = sys.argv[1]
 	float_delimiter = sys.argv[2]
 elif len(sys.argv) == 2:	
 	feed_url = sys.argv[1]
 else:
 	print('it should not happen that no parameter is given')
+	os.terminate('no feed given')
 
 
 def get_mp3_file(linklist):
@@ -83,19 +85,28 @@ def eurofloat(f):
 
 NewsFeed = feedparser.parse(feed_url)
 
-file_content = '"index";"Title";"I";"I Threshold";"LRA";"LRA T";"LRA L";"LRA H"'+"\n"
+csv_content = '"index";"Title";"I";"I Threshold";"LRA";"LRA T";"LRA L";"LRA H"'+"\n"
+json_content = []
 
 for j in range(0,len(NewsFeed.entries)):
 	i = len(NewsFeed.entries)-j-1
-	this_title = NewsFeed.entries[i]['title']
+	this_title = NewsFeed.entries[i]['title'].replace('"',"'")
 	this_mp3_url = get_mp3_file(NewsFeed.entries[i]['links'])
 	print(this_title+ ' - '+this_mp3_url)
-	urllib.request.urlretrieve(this_mp3_url, str(j)+".mp3")
-	this_loudness = get_loudnesses_from_file(str(j)+".mp3")
-	os.remove(str(j)+".mp3")
-	file_content += str(j)+';"'+this_title+'";'+eurofloat(this_loudness['I']+50)+';'+eurofloat(this_loudness['I Threshold']+60)+';'+eurofloat(this_loudness['LRA'])+';'+eurofloat(this_loudness['LRA Threshold']+70)+';'+eurofloat(this_loudness['LRA Low']+50)+';'+eurofloat(this_loudness['LRA High']+50)+"\n"
-	with open("loudness.csv", "w") as csv_file:
-		csv_file.write(file_content)
+	urllib.request.urlretrieve(this_mp3_url, str(j+first_episode_number)+".mp3")
+	this_loudness = get_loudnesses_from_file(str(j+first_episode_number)+".mp3")
+	os.remove(str(j+first_episode_number)+".mp3")
+	csv_content += str(j+first_episode_number)+';"'+this_title+'";'+eurofloat(this_loudness['I'])+';'+eurofloat(this_loudness['I Threshold'])+';'+eurofloat(this_loudness['LRA'])+';'+eurofloat(this_loudness['LRA Threshold'])+';'+eurofloat(this_loudness['LRA Low'])+';'+eurofloat(this_loudness['LRA High'])+"\n"
+	json_content.append({**this_loudness, **{'index':j+first_episode_number,"title":this_title}})
+	if output_format == "csv":
+		with open("loudness.csv", "w") as csv_file:
+			csv_file.write(csv_content)
+	elif output_format == "json":
+		with open('loudness.json', 'w') as json_file:
+			json.dump(json_content, json_file)
+	else:
+		print('unknown output format: '+output_format)
+		os.terminate('unknown output format: '+output_format)
 
 print('Done')
 
